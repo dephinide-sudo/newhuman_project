@@ -220,6 +220,13 @@
 
   .footer-note { text-align: center; font-size: 11.5px; color: var(--ink-mute); margin-top: 16px; }
 
+  .text-link-btn {
+    display: block; width: 100%; margin-top: 12px; padding: 4px 0;
+    background: none; border: none; color: var(--ink-mute); font-size: 12px;
+    cursor: pointer; text-align: center;
+  }
+  .text-link-btn:active { color: var(--ink-soft); }
+
   /* ---- 대문 화면 ---- */
   .landing-hero {
     padding: 44px 24px 30px; text-align: center;
@@ -395,6 +402,7 @@
         <p class="fb-thanks" id="fb-thanks">마음 전달받았어요, 고마워요.</p>
 
         <button class="ghost-btn" onclick="resetFlow()">다른 약속으로 다시 해보기</button>
+        <button class="text-link-btn" onclick="showStep('step-landing')">메인 화면으로</button>
       </div>
     </div>
 
