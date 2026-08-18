@@ -404,8 +404,7 @@
         </div>
         <p class="fb-thanks" id="fb-thanks">마음 전달받았어요, 고마워요.</p>
 
-        <button class="ghost-btn" onclick="resetFlow()">다른 약속으로 다시 해보기</button>
-        <button class="text-link-btn" onclick="showStep('step-landing')">메인 화면으로</button>
+        <button class="text-link-btn" onclick="currentJudgmentId = null; showStep('step-landing')">메인 화면으로</button>
       </div>
     </div>
 
@@ -732,11 +731,6 @@
     document.getElementById('feedback-row').style.display = 'none';
     document.getElementById('fb-thanks').style.display = 'block';
     logEvent('feedback_click', { rating: kind }, currentJudgmentId, { rating: kind });
-  }
-
-  function resetFlow() {
-    currentJudgmentId = null;
-    showStep('step-input');
   }
 </script>
 
