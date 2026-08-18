@@ -1,7 +1,10 @@
 // Vercel 서버리스 함수: OpenRouter로 상황별 거절 문구 3톤(normal/polite/casual)을 생성한다.
 // 필요한 환경변수 (Vercel 프로젝트 설정 > Environment Variables):
 //   OPENROUTER_API_KEY  (필수) - https://openrouter.ai/keys 에서 발급
-//   OPENROUTER_MODEL    (선택) - 기본값: meta-llama/llama-3.1-8b-instruct:free
+//   OPENROUTER_MODEL    (선택) - 기본값: google/gemma-4-31b-it:free
+//     무료 모델은 OpenRouter가 수시로 교체/폐지한다. 이 기본값이 다시 막히면
+//     https://openrouter.ai/models?max_price=0 에서 살아있는 ":free" 모델 슬러그를 골라
+//     OPENROUTER_MODEL 환경변수로 지정하면 코드 수정 없이 바로 바뀐다.
 //   PUBLIC_SITE_URL     (선택) - OpenRouter 요청 헤더(HTTP-Referer)에 사용할 배포 URL
 
 const RELATION_LABEL = { close: '친한 친구', ambiguous: '애매한 지인', work: '업무 관계' };
@@ -62,7 +65,7 @@ module.exports = async function handler(req, res) {
         'X-Title': 'Galkka-Malkka AI' // HTTP 헤더 값은 ASCII만 허용되어 한글을 넣으면 fetch가 TypeError를 던진다
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.1-8b-instruct:free',
+        model: process.env.OPENROUTER_MODEL || 'google/gemma-4-31b-it:free',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
