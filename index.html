@@ -6,6 +6,9 @@
 <title>갈까말까 AI · 애매한 약속, 대신 정리해드려요</title>
 <meta name="description" content="관계·리소스·컨디션을 알려주면 AI가 참석 여부를 판단해주고, 거절이 필요할 땐 문구까지 대신 써드리는 서비스">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- GA4 측정 ID는 /api/config가 Vercel 환경변수에서 내려주므로 여기엔 id를 하드코딩하지 않는다 -->
 <script async src="https://www.googletagmanager.com/gtag/js"></script>
@@ -20,11 +23,6 @@
     src: url('Distort-Bold.ttf') format('truetype');
     font-weight: 700;
   }
-  @font-face {
-    font-family: 'KyoboHandwriting2025lyb';
-    src: url('KyoboHandwriting2025lyb.ttf') format('truetype');
-  }
-
   :root {
     --cream: #FAF5EC;
     --card: #FFFFFF;
@@ -46,7 +44,7 @@
 
   body {
     margin: 0;
-    font-family: 'Pretendard', -apple-system, sans-serif;
+    font-family: 'Hahmlet', 'Pretendard', -apple-system, sans-serif;
     background: var(--cream);
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
@@ -95,8 +93,8 @@
   }
   .back-btn:active { background: var(--sand); }
   .eyebrow { font-size: 12px; color: var(--ink-mute); margin: 0; }
-  h1 { font-family: 'Distort-Bold', 'Pretendard', sans-serif; font-size: 21px; font-weight: 700; line-height: 1.4; margin: 0 0 6px; letter-spacing: -0.02em; }
-  .lede { font-family: 'KyoboHandwriting2025lyb', 'Pretendard', sans-serif; font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 26px; }
+  h1 { font-family: 'Distort-Bold', 'Hahmlet', sans-serif; font-size: 21px; font-weight: 700; line-height: 1.4; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .lede { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 26px; }
 
   .field { margin-bottom: 22px; }
   .field-label { font-size: 14px; font-weight: 600; margin: 0 0 3px; }
@@ -177,7 +175,7 @@
   .hero-eyebrow { font-size: 13px; margin: 0 0 8px; }
   .hero.attend .hero-eyebrow { color: var(--sage-deep); }
   .hero.decline .hero-eyebrow { color: var(--rose-deep); }
-  .hero-title { font-family: 'Distort-Bold', 'Pretendard', sans-serif; font-size: 21px; font-weight: 700; line-height: 1.45; margin: 0; letter-spacing: -0.01em; }
+  .hero-title { font-family: 'Distort-Bold', 'Hahmlet', sans-serif; font-size: 21px; font-weight: 700; line-height: 1.45; margin: 0; letter-spacing: -0.01em; }
   .hero.attend .hero-title { color: var(--sage-deep); }
   .hero.decline .hero-title { color: var(--rose-deep); }
 
@@ -251,8 +249,8 @@
     animation: float 3.6s ease-in-out infinite;
   }
   @media (prefers-reduced-motion: reduce) { .landing-blob { animation: none; } }
-  .landing-title { font-family: 'Distort-Bold', 'Pretendard', sans-serif; font-size: 24px; font-weight: 700; line-height: 1.4; margin: 0 0 10px; letter-spacing: -0.02em; }
-  .landing-lede { font-family: 'KyoboHandwriting2025lyb', 'Pretendard', sans-serif; font-size: 13.5px; color: var(--ink-soft); line-height: 1.65; margin: 0 auto; max-width: 300px; }
+  .landing-title { font-family: 'Distort-Bold', 'Hahmlet', sans-serif; font-size: 24px; font-weight: 700; line-height: 1.4; margin: 0 0 10px; letter-spacing: -0.02em; }
+  .landing-lede { font-size: 13.5px; color: var(--ink-soft); line-height: 1.65; margin: 0 auto; max-width: 300px; }
 
   .landing-body { padding: 26px 22px 28px; }
   .how-row { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
