@@ -59,7 +59,7 @@ module.exports = async function handler(req, res) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
         'HTTP-Referer': process.env.PUBLIC_SITE_URL || 'https://go-or-notgo.vercel.app',
-        'X-Title': '갈까말까 AI'
+        'X-Title': 'Galkka-Malkka AI' // HTTP 헤더 값은 ASCII만 허용되어 한글을 넣으면 fetch가 TypeError를 던진다
       },
       body: JSON.stringify({
         model: process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.1-8b-instruct:free',
