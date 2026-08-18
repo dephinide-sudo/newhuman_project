@@ -7,8 +7,8 @@
 <meta name="description" content="관계·리소스·컨디션을 알려주면 AI가 참석 여부를 판단해주고, 거절이 필요할 땐 문구까지 대신 써드리는 서비스">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- GA4 측정 ID를 발급받으면 아래 id와 스크립트 하단 gtag('config', ...) 값을 함께 교체하세요 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<!-- GA4 측정 ID는 /api/config가 Vercel 환경변수에서 내려주므로 여기엔 id를 하드코딩하지 않는다 -->
+<script async src="https://www.googletagmanager.com/gtag/js"></script>
 <style>
   @font-face {
     font-family: 'Pretendard';
@@ -416,18 +416,23 @@
 
 <script>
   // ---- GA4 + Supabase 연동 설정 ----
-  // Supabase 프로젝트를 만든 뒤 Project Settings > API 에서 값을 가져와 아래 두 줄을 교체하세요.
-  // anon key는 RLS(judgments/funnel_events에 insert-only 정책)로 보호되므로 클라이언트 코드에 있어도 안전합니다.
-  const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
-  const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
-  const supabase = (SUPABASE_URL.startsWith('https://YOUR-PROJECT'))
-    ? null
-    : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+  // 키를 코드에 하드코딩하지 않고, Vercel 환경변수(SUPABASE_URL/SUPABASE_ANON_KEY/GA_MEASUREMENT_ID)를
+  // 읽어 내려주는 /api/config에서 런타임에 받아온다. 배포/환경변수 설정 전에는 config가 비어있어
+  // supabase가 null로 남고 GA config도 호출되지 않아, 기존 기능(판단/문구 생성)은 그대로 동작한다.
   window.dataLayer = window.dataLayer || [];
   function gtag() { dataLayer.push(arguments); }
   gtag('js', new Date());
-  gtag('config', 'G-XXXXXXXXXX'); // <head>의 gtag.js 스크립트 id와 동일한 값으로 교체하세요
+
+  let supabase = null;
+  fetch('/api/config')
+    .then(r => r.json())
+    .then(cfg => {
+      if (cfg.gaMeasurementId) gtag('config', cfg.gaMeasurementId);
+      if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
+        supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+      }
+    })
+    .catch(err => console.error('config load failed (아직 배포 전이거나 /api/config 미설정)', err));
 
   const sessionId = crypto.randomUUID(); // 페이지 로드당 1개, 퍼널/날짜별 분석의 연결 키
   let currentJudgmentId = null;
