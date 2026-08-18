@@ -6,6 +6,9 @@
 <title>갈까말까 AI · 애매한 약속, 대신 정리해드려요</title>
 <meta name="description" content="관계·리소스·컨디션을 알려주면 AI가 참석 여부를 판단해주고, 거절이 필요할 땐 문구까지 대신 써드리는 서비스">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- GA4 측정 ID를 발급받으면 아래 id와 스크립트 하단 gtag('config', ...) 값을 함께 교체하세요 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
 <style>
   @font-face {
     font-family: 'Pretendard';
@@ -412,6 +415,36 @@
 </div>
 
 <script>
+  // ---- GA4 + Supabase 연동 설정 ----
+  // Supabase 프로젝트를 만든 뒤 Project Settings > API 에서 값을 가져와 아래 두 줄을 교체하세요.
+  // anon key는 RLS(judgments/funnel_events에 insert-only 정책)로 보호되므로 클라이언트 코드에 있어도 안전합니다.
+  const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+  const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
+  const supabase = (SUPABASE_URL.startsWith('https://YOUR-PROJECT'))
+    ? null
+    : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX'); // <head>의 gtag.js 스크립트 id와 동일한 값으로 교체하세요
+
+  const sessionId = crypto.randomUUID(); // 페이지 로드당 1개, 퍼널/날짜별 분석의 연결 키
+  let currentJudgmentId = null;
+
+  // GA 이벤트 전송 + Supabase funnel_events 적재를 한 번에 처리한다.
+  // gaParams/eventDetail에는 절대 recipient_name 같은 원문 개인정보를 넣지 않는다.
+  function logEvent(eventType, gaParams, judgmentId, eventDetail) {
+    gtag('event', eventType, gaParams || {});
+    if (!supabase) return; // Supabase 미설정 시(로컬 개발 등) 조용히 스킵
+    supabase.from('funnel_events').insert({
+      session_id: sessionId,
+      event_type: eventType,
+      judgment_id: judgmentId || null,
+      event_detail: eventDetail || null
+    }).then(({ error }) => { if (error) console.error('funnel_events insert failed', error); });
+  }
+
   let state = { relation: 'ambiguous', nextchance: 'no', tone: 'normal' };
   let currentOutcome = null;
 
@@ -453,6 +486,7 @@
   }
 
   function runJudgement() {
+    logEvent('form_submit', { relation: state.relation, nextchance: state.nextchance, has_name: !!state.recipientName }, null, null);
     showStep('step-loading');
     setTimeout(computeResult, 900);
   }
@@ -564,6 +598,30 @@
     document.getElementById('fb-thanks').style.display = 'none';
     document.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('picked'));
 
+    currentJudgmentId = null;
+    if (supabase) {
+      const score = outcome === 'decline' ? confidence : 100 - confidence;
+      supabase.from('judgments').insert({
+        session_id: sessionId,
+        relation: state.relation,
+        nextchance: state.nextchance,
+        time_hours: raw.time,
+        cost_manwon: raw.cost,
+        condition: raw.condition,
+        recipient_name: state.recipientName || null,
+        outcome,
+        confidence,
+        score,
+        top_factors: topFactors.map(f => ({ key: f.key, weight: f.weight }))
+      }).select('id').single().then(({ data, error }) => {
+        if (error) { console.error('judgments insert failed', error); return; }
+        currentJudgmentId = data.id;
+        logEvent('result_view', { outcome, confidence }, currentJudgmentId, null);
+      });
+    } else {
+      logEvent('result_view', { outcome, confidence }, null, null);
+    }
+
     showStep('step-result');
   }
 
@@ -653,6 +711,7 @@
     btn.textContent = '복사했어요';
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = '이 문구 복사하기'; btn.classList.remove('copied'); }, 1800);
+    logEvent('copy_message', { tone: state.tone }, currentJudgmentId, { tone: state.tone });
   }
 
   function giveFeedback(kind) {
@@ -660,9 +719,11 @@
     event.currentTarget.classList.add('picked');
     document.getElementById('feedback-row').style.display = 'none';
     document.getElementById('fb-thanks').style.display = 'block';
+    logEvent('feedback_click', { rating: kind }, currentJudgmentId, { rating: kind });
   }
 
   function resetFlow() {
+    currentJudgmentId = null;
     showStep('step-input');
   }
 </script>
