@@ -1,13 +1,56 @@
 // Vercel 서버리스 함수: OpenRouter로 상황별 거절 문구 3톤(normal/polite/casual)을 생성한다.
 // 필요한 환경변수 (Vercel 프로젝트 설정 > Environment Variables):
 //   OPENROUTER_API_KEY  (필수) - https://openrouter.ai/keys 에서 발급
-//   OPENROUTER_MODEL    (선택) - 기본값: google/gemma-4-31b-it:free
-//     무료 모델은 OpenRouter가 수시로 교체/폐지한다. 이 기본값이 다시 막히면
-//     https://openrouter.ai/models?max_price=0 에서 살아있는 ":free" 모델 슬러그를 골라
-//     OPENROUTER_MODEL 환경변수로 지정하면 코드 수정 없이 바로 바뀐다.
+//   OPENROUTER_MODEL    (선택) - 지정하면 이 모델만 사용(폴백 없음). 비워두면 아래 FALLBACK_MODELS를 순서대로 시도.
+//     무료 모델은 OpenRouter 공유 풀이라 수시로 rate-limit(429)/폐지가 난다.
+//     https://openrouter.ai/models?max_price=0 에서 살아있는 ":free" 모델로 목록을 갱신하면 된다.
 //   PUBLIC_SITE_URL     (선택) - OpenRouter 요청 헤더(HTTP-Referer)에 사용할 배포 URL
 
 const RELATION_LABEL = { close: '친한 친구', ambiguous: '애매한 지인', work: '업무 관계' };
+
+// 하나가 rate-limit(429)이나 일시 장애로 막혀도 다음 모델로 자동 재시도한다.
+const FALLBACK_MODELS = [
+  'google/gemma-4-31b-it:free',
+  'openai/gpt-oss-20b:free',
+  'nvidia/nemotron-3-super-120b-a12b:free'
+];
+
+async function callOpenRouter(model, apiKey, systemPrompt, userPrompt) {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': process.env.PUBLIC_SITE_URL || 'https://go-or-notgo.vercel.app',
+      'X-Title': 'Galkka-Malkka AI' // HTTP 헤더 값은 ASCII만 허용되어 한글을 넣으면 fetch가 TypeError를 던진다
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.8,
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`${model} 요청 실패 (${response.status}): ${detail}`);
+  }
+
+  const data = await response.json();
+  const raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  const jsonMatch = typeof raw === 'string' ? raw.match(/\{[\s\S]*\}/) : null;
+  const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+
+  if (!parsed.normal || !parsed.polite || !parsed.casual) {
+    throw new Error(`${model} 응답 형식이 불완전함: ${JSON.stringify(parsed)}`);
+  }
+
+  return parsed;
+}
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -55,43 +98,18 @@ module.exports = async function handler(req, res) {
 
 위 상황에 맞는 거절 메시지를 normal/polite/casual 세 가지 톤으로 JSON으로 작성해주세요.`;
 
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': process.env.PUBLIC_SITE_URL || 'https://go-or-notgo.vercel.app',
-        'X-Title': 'Galkka-Malkka AI' // HTTP 헤더 값은 ASCII만 허용되어 한글을 넣으면 fetch가 TypeError를 던진다
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'google/gemma-4-31b-it:free',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.8,
-        response_format: { type: 'json_object' }
-      })
-    });
+  const modelsToTry = process.env.OPENROUTER_MODEL ? [process.env.OPENROUTER_MODEL] : FALLBACK_MODELS;
+  const errors = [];
 
-    if (!response.ok) {
-      const detail = await response.text();
-      res.status(502).json({ error: 'LLM request failed', detail });
+  for (const model of modelsToTry) {
+    try {
+      const parsed = await callOpenRouter(model, apiKey, systemPrompt, userPrompt);
+      res.status(200).json(parsed);
       return;
+    } catch (err) {
+      errors.push(String(err.message || err));
     }
-
-    const data = await response.json();
-    const raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-    const jsonMatch = typeof raw === 'string' ? raw.match(/\{[\s\S]*\}/) : null;
-    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
-
-    if (!parsed.normal || !parsed.polite || !parsed.casual) {
-      throw new Error('Incomplete response from LLM');
-    }
-
-    res.status(200).json(parsed);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to generate message', detail: String(err) });
   }
+
+  res.status(502).json({ error: 'All OpenRouter models failed', detail: errors });
 };
