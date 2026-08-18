@@ -607,8 +607,13 @@
 
     currentJudgmentId = null;
     if (supabaseClient) {
+      // RLS에 insert 정책만 있고 select 정책은 없으므로, insert 후 .select()로 되읽으면
+      // RETURNING이 RLS에 막혀 항상 실패한다. id를 클라이언트에서 미리 만들어 같이 보내면
+      // 되읽을 필요가 없어진다.
+      const judgmentId = crypto.randomUUID();
       const score = outcome === 'decline' ? confidence : 100 - confidence;
       supabaseClient.from('judgments').insert({
+        id: judgmentId,
         session_id: sessionId,
         relation: state.relation,
         nextchance: state.nextchance,
@@ -620,9 +625,9 @@
         confidence,
         score,
         top_factors: topFactors.map(f => ({ key: f.key, weight: f.weight }))
-      }).select('id').single().then(({ data, error }) => {
+      }).then(({ error }) => {
         if (error) { console.error('judgments insert failed', error); return; }
-        currentJudgmentId = data.id;
+        currentJudgmentId = judgmentId;
         logEvent('result_view', { outcome, confidence }, currentJudgmentId, null);
       });
     } else {
