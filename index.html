@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>갈까말까 AI · 애매한 약속, 대신 정리해드려요</title>
+<meta name="description" content="관계·리소스·컨디션을 알려주면 AI가 참석 여부를 판단해주고, 거절이 필요할 땐 문구까지 대신 써드리는 서비스">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<style>
+  @font-face {
+    font-family: 'Pretendard';
+    src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2') format('woff2-variations');
+    font-weight: 45 920;
+  }
+
+  :root {
+    --cream: #FAF5EC;
+    --card: #FFFFFF;
+    --ink: #2B2420;
+    --ink-soft: #6E645A;
+    --ink-mute: #A69C8E;
+    --border: #E9E0D2;
+    --sage: #5F8B67;
+    --sage-tint: #E7F1E5;
+    --sage-deep: #35533B;
+    --rose: #C1707B;
+    --rose-tint: #FBEBEC;
+    --rose-deep: #7A3640;
+    --sand: #EFE6D4;
+    --shadow: 0 1px 2px rgba(43,36,32,0.04), 0 8px 24px rgba(43,36,32,0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--sage) 0%, var(--rose) 100%);
+    flex-shrink: 0;
+  }
+  .brand-name { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+
+  .card {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .step { display: none; }
+  .step.active { display: block; animation: rise 0.35s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ---- 입력 화면 ---- */
+  .pad { padding: 26px 22px 24px; }
+  .pad-header { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; }
+  .back-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; margin: 0; padding: 0; flex-shrink: 0;
+    border: 1px solid var(--border); border-radius: 9px; background: transparent;
+    color: var(--ink-soft); font-size: 15px; cursor: pointer; transition: background 0.15s;
+  }
+  .back-btn:active { background: var(--sand); }
+  .eyebrow { font-size: 12px; color: var(--ink-mute); margin: 0; }
+  h1 { font-size: 21px; font-weight: 700; line-height: 1.4; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .lede { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 26px; }
+
+  .field { margin-bottom: 22px; }
+  .field-label { font-size: 14px; font-weight: 600; margin: 0 0 3px; }
+  .field-help { font-size: 12.5px; color: var(--ink-mute); margin: 0 0 10px; line-height: 1.5; }
+
+  .chips { display: flex; gap: 7px; flex-wrap: wrap; }
+  .chip {
+    font-size: 13px; padding: 8px 14px; border-radius: 20px;
+    border: 1px solid var(--border); background: transparent; color: var(--ink-soft);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .chip.selected { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .text-input {
+    width: 100%; font-size: 14px; font-family: inherit; color: var(--ink);
+    padding: 11px 14px; border-radius: 12px; border: 1px solid var(--border);
+    background: transparent; outline: none;
+  }
+  .text-input:focus { border-color: var(--ink-mute); }
+  .text-input::placeholder { color: var(--ink-mute); }
+
+  .toggle-row { display: flex; gap: 8px; }
+  .toggle {
+    flex: 1; text-align: center; font-size: 13px; padding: 10px 0; border-radius: 12px;
+    border: 1px solid var(--border); background: transparent; color: var(--ink-soft); cursor: pointer;
+  }
+  .toggle.selected { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .slider-icon { width: 30px; font-size: 15px; color: var(--ink-mute); text-align: center; }
+  input[type="range"] {
+    flex: 1; -webkit-appearance: none; height: 4px; border-radius: 4px; background: var(--sand); outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--ink); cursor: pointer; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--border);
+  }
+  .slider-val { font-size: 12px; color: var(--ink-soft); width: 52px; text-align: right; flex-shrink: 0; }
+
+  .primary-btn {
+    width: 100%; padding: 15px 0; border-radius: 14px; border: none;
+    background: var(--ink); color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .primary-btn:active { opacity: 0.8; }
+  .ghost-btn {
+    width: 100%; padding: 13px 0; border-radius: 14px; background: transparent;
+    border: 1px solid var(--border); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+
+  /* ---- 로딩 ---- */
+  .loading-wrap { text-align: center; padding: 90px 22px; }
+  .blob-spin {
+    width: 46px; height: 46px; margin: 0 auto 20px; border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+    background: linear-gradient(135deg, var(--sage) 0%, var(--rose) 100%);
+    animation: morph 1.6s ease-in-out infinite;
+  }
+  @keyframes morph {
+    0%, 100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; transform: rotate(0deg); }
+    50% { border-radius: 63% 37% 42% 58% / 55% 40% 60% 45%; transform: rotate(20deg); }
+  }
+  .loading-text { font-size: 14px; color: var(--ink-soft); }
+
+  /* ---- 결과 화면 (단일 스크롤) ---- */
+  .hero {
+    padding: 36px 22px 30px; text-align: center; transition: background 0.3s;
+  }
+  .hero.attend { background: var(--sage-tint); }
+  .hero.decline { background: var(--rose-tint); }
+
+  .blob {
+    width: 68px; height: 68px; margin: 0 auto 16px;
+    animation: float 3.2s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .blob { animation: none; } }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+  .hero-eyebrow { font-size: 13px; margin: 0 0 8px; }
+  .hero.attend .hero-eyebrow { color: var(--sage-deep); }
+  .hero.decline .hero-eyebrow { color: var(--rose-deep); }
+  .hero-title { font-size: 21px; font-weight: 700; line-height: 1.45; margin: 0; letter-spacing: -0.01em; }
+  .hero.attend .hero-title { color: var(--sage-deep); }
+  .hero.decline .hero-title { color: var(--rose-deep); }
+
+  .body-pad { padding: 24px 22px 26px; }
+
+  .confidence-label { font-size: 12px; color: var(--ink-mute); margin: 0 0 6px; }
+  .bar-track { height: 9px; background: var(--sand); border-radius: 20px; overflow: hidden; margin-bottom: 6px; }
+  .bar-fill { height: 100%; border-radius: 20px; width: 0%; transition: width 0.7s ease; }
+  .bar-fill.attend { background: var(--sage); }
+  .bar-fill.decline { background: var(--rose); }
+  .confidence-sub { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 24px; }
+
+  .why-title { font-size: 15px; font-weight: 700; margin: 0 0 12px; }
+  .reason { display: flex; gap: 10px; margin-bottom: 12px; }
+  .reason-dot {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+  }
+  .reason-dot.attend { background: var(--sage-tint); color: var(--sage-deep); }
+  .reason-dot.decline { background: var(--rose-tint); color: var(--rose-deep); }
+  .reason-text { font-size: 13.5px; line-height: 1.6; margin: 0; padding-top: 2px; }
+
+  .divider { height: 0.5px; background: var(--border); margin: 22px 0; }
+
+  .tone-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tone-chip {
+    font-size: 12px; padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--ink-soft); cursor: pointer;
+  }
+  .tone-chip.selected { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .message-box {
+    background: var(--cream); border-radius: 14px; padding: 15px 16px;
+    font-size: 13.5px; line-height: 1.65; margin-bottom: 10px; min-height: 20px;
+  }
+  .copy-btn {
+    width: 100%; padding: 12px 0; border-radius: 14px; background: transparent;
+    border: 1px solid var(--border); color: var(--ink); font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+  .copy-btn.copied { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .closing { font-size: 14px; line-height: 1.75; color: var(--ink); margin: 24px 0 18px; }
+
+  .feedback-label { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
+  .feedback-row { display: flex; gap: 8px; margin-bottom: 22px; }
+  .fb-btn {
+    flex: 1; padding: 11px 0; border-radius: 12px; border: 1px solid var(--border);
+    background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .fb-btn.picked { background: var(--sage-tint); border-color: var(--sage); color: var(--sage-deep); }
+  .fb-thanks { font-size: 13px; color: var(--ink-soft); text-align: center; padding: 11px 0; display: none; }
+
+  .footer-note { text-align: center; font-size: 11.5px; color: var(--ink-mute); margin-top: 16px; }
+
+  /* ---- 대문 화면 ---- */
+  .landing-hero {
+    padding: 44px 24px 30px; text-align: center;
+    background: linear-gradient(180deg, var(--sand) 0%, var(--card) 100%);
+  }
+  .landing-blob {
+    width: 84px; height: 84px; margin: 0 auto 20px;
+    background: linear-gradient(135deg, var(--sage) 0%, var(--rose) 100%);
+    border-radius: 46% 54% 60% 40% / 50% 45% 55% 50%;
+    animation: float 3.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .landing-blob { animation: none; } }
+  .landing-title { font-size: 24px; font-weight: 700; line-height: 1.4; margin: 0 0 10px; letter-spacing: -0.02em; }
+  .landing-lede { font-size: 13.5px; color: var(--ink-soft); line-height: 1.65; margin: 0 auto; max-width: 300px; }
+
+  .landing-body { padding: 26px 22px 28px; }
+  .how-row { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+  .how-num {
+    width: 24px; height: 24px; border-radius: 50%; background: var(--sand); color: var(--ink-soft);
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .how-text { font-size: 13.5px; line-height: 1.6; color: var(--ink); margin: 0; padding-top: 2px; }
+  .how-text b { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">갈까말까 AI</div>
+  </div>
+
+  <div class="card">
+
+    <!-- STEP 0 : 대문 -->
+    <div class="step active" id="step-landing">
+      <div class="landing-hero">
+        <div class="landing-blob"></div>
+        <p class="landing-title">그 약속, 갈까요 말까요?</p>
+        <p class="landing-lede">관계·리소스·컨디션만 알려주시면, 참석할지 거절할지 대신 정리해드려요. 거절이 필요할 땐 문구까지 함께요.</p>
+      </div>
+      <div class="landing-body">
+        <div class="how-row">
+          <div class="how-num">1</div>
+          <p class="how-text">관계, 소요 시간·비용, 지금 컨디션을 <b>가볍게 입력</b>해요.</p>
+        </div>
+        <div class="how-row">
+          <div class="how-num">2</div>
+          <p class="how-text">AI가 근거를 정리해서 <b>참석/거절과 확신도</b>를 알려줘요.</p>
+        </div>
+        <div class="how-row" style="margin-bottom: 24px;">
+          <div class="how-num">3</div>
+          <p class="how-text">거절이 필요하면 <b>바로 쓸 문구</b>까지 챙겨드려요.</p>
+        </div>
+        <button class="primary-btn" onclick="showStep('step-input')">시작하기</button>
+        <p class="footer-note" style="margin-top:14px;">30초면 끝나요.</p>
+      </div>
+    </div>
+
+    <!-- STEP 1 : 입력 -->
+    <div class="step" id="step-input">
+      <div class="pad">
+        <div class="pad-header">
+          <button class="back-btn" onclick="showStep('step-landing')" aria-label="뒤로가기">←</button>
+          <p class="eyebrow">1 / 2</p>
+        </div>
+        <h1>이 약속, 같이 고민해볼까요?</h1>
+        <p class="lede">몇 가지만 알려주시면, 제가 대신 정리해서 판단해드릴게요.</p>
+
+        <div class="field">
+          <p class="field-label">상대방 이름을 알려주시면 문구에 반영해드려요</p>
+          <p class="field-help">선택 입력이에요. 비워두면 이름 없이 문구를 만들어드려요.</p>
+          <input type="text" id="input-name" class="text-input" placeholder="예: 지훈, 수아" maxlength="20">
+        </div>
+
+        <div class="field">
+          <p class="field-label">상대와 얼마나 가까운 사이인가요?</p>
+          <p class="field-help">가장 가깝게 느껴지는 걸 골라주세요.</p>
+          <div class="chips" data-group="relation">
+            <button class="chip" data-value="close">친한 친구</button>
+            <button class="chip selected" data-value="ambiguous">애매한 지인</button>
+            <button class="chip" data-value="work">업무 관계</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <p class="field-label">다시 만날 기회가 있을까요?</p>
+          <p class="field-help">이번이 아니면 다음이 없는 자리인지 궁금해요.</p>
+          <div class="toggle-row" data-group="nextchance">
+            <button class="toggle" data-value="yes">또 볼 수 있어요</button>
+            <button class="toggle selected" data-value="no">이번뿐이에요</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <p class="field-label">이 약속에 들어갈 리소스도 알려주세요</p>
+          <p class="field-help">시간과 비용이 클수록 신중하게 볼게요.</p>
+          <div class="slider-row">
+            <div class="slider-icon">⏱</div>
+            <input type="range" id="slider-time" min="0" max="8" value="4" step="1">
+            <div class="slider-val" id="val-time">약 4h</div>
+          </div>
+          <div class="slider-row">
+            <div class="slider-icon">₩</div>
+            <input type="range" id="slider-cost" min="0" max="10" value="3" step="1">
+            <div class="slider-val" id="val-cost">3만원</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <p class="field-label">지금 컨디션은 어떠세요?</p>
+          <p class="field-help">솔직할수록 더 정확해져요.</p>
+          <div class="slider-row" style="margin-bottom:2px;">
+            <div class="slider-icon">◐</div>
+            <input type="range" id="slider-condition" min="0" max="10" value="4" step="1">
+            <div class="slider-val" id="val-condition">보통</div>
+          </div>
+        </div>
+
+        <button class="primary-btn" onclick="runJudgement()" style="margin-top:8px;">이제 판단해줘</button>
+      </div>
+    </div>
+
+    <!-- STEP 2 : 로딩 -->
+    <div class="step" id="step-loading">
+      <div class="loading-wrap">
+        <div class="blob-spin"></div>
+        <p class="loading-text">AI가 근거를 정리하고 있어요</p>
+      </div>
+    </div>
+
+    <!-- STEP 3 : 결과 (단일 스크롤) -->
+    <div class="step" id="step-result">
+      <div class="hero" id="hero">
+        <div class="blob" id="result-blob"></div>
+        <p class="hero-eyebrow">고민 끝에 내린 결론</p>
+        <p class="hero-title" id="hero-title"></p>
+      </div>
+
+      <div class="body-pad">
+        <p class="confidence-label">얼마나 확신하냐면</p>
+        <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+        <p class="confidence-sub" id="confidence-sub"></p>
+
+        <p class="why-title">왜 이런 결론이 나왔는지 말씀드릴게요</p>
+        <div id="reason-list"></div>
+
+        <div class="divider" id="decline-divider" style="display:none;"></div>
+
+        <div id="decline-block" style="display:none;">
+          <p class="why-title" style="margin-bottom:4px;">거절해야 한다면, 이렇게 말해보는 건 어때요?</p>
+          <p class="field-help" style="margin-bottom:10px;">마음에 드는 톤을 골라보세요.</p>
+          <div class="tone-row">
+            <button class="tone-chip selected" data-tone="normal" onclick="setTone('normal')">보통</button>
+            <button class="tone-chip" data-tone="polite" onclick="setTone('polite')">정중하게</button>
+            <button class="tone-chip" data-tone="casual" onclick="setTone('casual')">편하게</button>
+          </div>
+          <div class="message-box" id="message-box"></div>
+          <button class="copy-btn" id="copy-btn" onclick="copyMessage()">이 문구 복사하기</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <p class="closing">여기까지가 제가 정리해본 생각이에요. 그래도 결국 정하는 건 당신 몫이니, 마음이 다르게 향한다면 그쪽을 따라가도 괜찮아요.</p>
+
+        <p class="feedback-label">이번 판단, 도움이 됐나요?</p>
+        <div class="feedback-row" id="feedback-row">
+          <button class="fb-btn" onclick="giveFeedback('good')">네, 도움됐어요</button>
+          <button class="fb-btn" onclick="giveFeedback('bad')">아쉬워요</button>
+        </div>
+        <p class="fb-thanks" id="fb-thanks">마음 전달받았어요, 고마워요.</p>
+
+        <button class="ghost-btn" onclick="resetFlow()">다른 약속으로 다시 해보기</button>
+      </div>
+    </div>
+
+  </div>
+
+
+</div>
+
+<script>
+  let state = { relation: 'ambiguous', nextchance: 'no', tone: 'normal' };
+  let currentOutcome = null;
+
+  document.querySelectorAll('[data-group]').forEach(group => {
+    group.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        state[group.dataset.group] = btn.dataset.value;
+      });
+    });
+  });
+
+  const inputName = document.getElementById('input-name');
+  inputName.addEventListener('input', () => {
+    state.recipientName = inputName.value.trim();
+  });
+
+  const sliderTime = document.getElementById('slider-time');
+  const sliderCost = document.getElementById('slider-cost');
+  const sliderCondition = document.getElementById('slider-condition');
+
+  sliderTime.addEventListener('input', () => {
+    document.getElementById('val-time').textContent = '약 ' + sliderTime.value + 'h';
+  });
+  sliderCost.addEventListener('input', () => {
+    document.getElementById('val-cost').textContent = sliderCost.value + '만원';
+  });
+  sliderCondition.addEventListener('input', () => {
+    const v = parseInt(sliderCondition.value);
+    const labels = ['많이 지쳤어요','지친 편이에요','그냥 그래요','보통','괜찮아요','좋아요','아주 좋아요'];
+    const idx = Math.min(labels.length - 1, Math.floor(v / 1.6));
+    document.getElementById('val-condition').textContent = labels[idx];
+  });
+
+  function showStep(id) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function runJudgement() {
+    showStep('step-loading');
+    setTimeout(computeResult, 900);
+  }
+
+  function computeResult() {
+    const time = parseInt(sliderTime.value);
+    const cost = parseInt(sliderCost.value);
+    const condition = parseInt(sliderCondition.value);
+
+    let score = 50;
+    const factors = [];
+
+    if (state.relation === 'ambiguous') { score += 16; factors.push({ dir: 'decline', weight: 16, key: 'relation-ambiguous' }); }
+    else if (state.relation === 'close') { score -= 16; factors.push({ dir: 'attend', weight: 16, key: 'relation-close' }); }
+    else { score += 4; factors.push({ dir: 'decline', weight: 4, key: 'relation-work' }); }
+
+    if (state.nextchance === 'yes') { score += 10; factors.push({ dir: 'decline', weight: 10, key: 'nextchance-yes' }); }
+    else { score -= 14; factors.push({ dir: 'attend', weight: 14, key: 'nextchance-no' }); }
+
+    const timeWeight = (time - 4) * 3;
+    score += timeWeight;
+    factors.push({ dir: timeWeight >= 0 ? 'decline' : 'attend', weight: Math.abs(timeWeight), key: 'time' });
+
+    const costWeight = (cost - 3) * 2;
+    score += costWeight;
+    factors.push({ dir: costWeight >= 0 ? 'decline' : 'attend', weight: Math.abs(costWeight), key: 'cost' });
+
+    const condWeight = (5 - condition) * 4;
+    score += condWeight;
+    factors.push({ dir: condWeight >= 0 ? 'decline' : 'attend', weight: Math.abs(condWeight), key: 'condition' });
+
+    score = Math.max(5, Math.min(95, Math.round(score)));
+    const outcome = score >= 50 ? 'decline' : 'attend';
+    const confidence = outcome === 'decline' ? score : 100 - score;
+    currentOutcome = outcome;
+
+    factors.sort((a, b) => b.weight - a.weight);
+    const topFactors = factors.filter(f => f.dir === outcome).slice(0, 3);
+
+    renderResult(outcome, confidence, topFactors, { time, cost, condition });
+  }
+
+  const reasonCopy = {
+    'relation-ambiguous': '아직은 좀 어색한 사이더라고요. 억지로 채울 필요는 없어요.',
+    'relation-close': '가까운 사이니까, 함께 보내는 시간 자체로 의미가 있어 보여요.',
+    'relation-work': '업무로 얽힌 자리라 완전히 마음 편하진 않을 것 같아요.',
+    'nextchance-yes': '이 관계는 다음에도 또 볼 수 있는 사이더라고요. 이번 한 번이 전부는 아니에요.',
+    'nextchance-no': '이번이 아니면 다시 없는 자리예요. 놓치면 아쉬움이 남을 수 있어요.',
+    'time': '이동에만 꽤 오랜 시간이 들어가요. 관계 밀도에 비해 부담이 좀 커 보여요.',
+    'cost': '비용도 적지 않게 들어가는 자리예요. 신중하게 볼 만해요.',
+    'condition-decline': '요즘 컨디션이 많이 낮은 편으로 보여요. 억지로 채우면 더 지칠 수 있어요.',
+    'condition-attend': '컨디션이 꽤 괜찮아 보여요. 다녀올 여유가 있는 것 같아요.'
+  };
+
+  function reasonText(key, extra) {
+    if (key === 'condition') return reasonCopy[currentOutcome === 'decline' ? 'condition-decline' : 'condition-attend'];
+    return reasonCopy[key];
+  }
+
+  function renderResult(outcome, confidence, topFactors, raw) {
+    const hero = document.getElementById('hero');
+    hero.className = 'hero ' + outcome;
+
+    const blob = document.getElementById('result-blob');
+    blob.style.background = outcome === 'attend'
+      ? 'linear-gradient(135deg, #7BA982 0%, #5F8B67 100%)'
+      : 'linear-gradient(135deg, #D89099 0%, #C1707B 100%)';
+    blob.style.borderRadius = outcome === 'attend'
+      ? '58% 42% 45% 55% / 55% 48% 52% 45%'
+      : '40% 60% 62% 38% / 45% 40% 60% 55%';
+
+    document.getElementById('hero-title').textContent = outcome === 'attend'
+      ? '이건 다녀오는 게 좋을 것 같아요'
+      : '이번엔 쉬어가는 게 좋을 것 같아요';
+
+    const fill = document.getElementById('bar-fill');
+    fill.className = 'bar-fill ' + outcome;
+    setTimeout(() => { fill.style.width = confidence + '%'; }, 60);
+    document.getElementById('confidence-sub').textContent =
+      confidence + '% 정도요. ' + (confidence >= 80 ? '꽤 확실해 보여요.' : '완전히 확실하진 않아요.');
+
+    const list = document.getElementById('reason-list');
+    list.innerHTML = '';
+    const icons = ['◆','●','▲'];
+    topFactors.forEach((f, i) => {
+      const row = document.createElement('div');
+      row.className = 'reason';
+      row.innerHTML =
+        '<div class="reason-dot ' + outcome + '">' + icons[i % 3] + '</div>' +
+        '<p class="reason-text">' + reasonText(f.key) + '</p>';
+      list.appendChild(row);
+    });
+
+    const declineBlock = document.getElementById('decline-block');
+    const declineDivider = document.getElementById('decline-divider');
+    if (outcome === 'decline') {
+      declineBlock.style.display = 'block';
+      declineDivider.style.display = 'block';
+      loadDeclineMessages(outcome, confidence, raw);
+      setTone('normal');
+    } else {
+      declineBlock.style.display = 'none';
+      declineDivider.style.display = 'none';
+    }
+
+    document.getElementById('copy-btn').textContent = '이 문구 복사하기';
+    document.getElementById('copy-btn').classList.remove('copied');
+    document.getElementById('feedback-row').style.display = 'flex';
+    document.getElementById('fb-thanks').style.display = 'none';
+    document.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('picked'));
+
+    showStep('step-result');
+  }
+
+  // 받침 유무에 따라 "아/야" 호격 조사를 고른다 (예: 지훈아 / 수아야)
+  function hasBatchim(str) {
+    if (!str) return false;
+    const code = str.charCodeAt(str.length - 1);
+    if (code < 0xAC00 || code > 0xD7A3) return false;
+    return (code - 0xAC00) % 28 !== 0;
+  }
+
+  // LLM 응답을 못 받았을 때 쓰는 룰베이스 폴백 문구
+  function fallbackMessage(tone, name) {
+    const templates = {
+      normal: '{addr}이번 약속은 참석이 어려울 것 같아요. 다음엔 꼭 함께해요!',
+      polite: '{addr}불러줘서 정말 고마워요. 근데 이번엔 사정이 있어서 참석이 어려울 것 같아요. 다음엔 꼭 함께해요!',
+      casual: '{addr}헐 아쉽다 ㅠㅠ 이번엔 진짜 컨디션이 안 따라줘서 못 갈 것 같아 미안! 다음엔 꼭 갈게'
+    };
+    let addr = '';
+    if (name) {
+      addr = tone === 'casual' ? name + (hasBatchim(name) ? '아, ' : '야, ') : name + '님, ';
+    }
+    return templates[tone].replace('{addr}', addr);
+  }
+
+  let generatedMessages = null; // { normal, polite, casual } from LLM, or null while unavailable
+  let messageRequestId = 0;
+
+  async function loadDeclineMessages(outcome, confidence, raw) {
+    generatedMessages = null;
+    const requestId = ++messageRequestId;
+    const relationLabel = { close: '친한 친구', ambiguous: '애매한 지인', work: '업무 관계' }[state.relation];
+    const nextchanceLabel = state.nextchance === 'yes' ? '또 볼 수 있는 사이' : '이번이 아니면 다시 없는 자리';
+
+    try {
+      const res = await fetch('/api/generate-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: state.recipientName || '',
+          relation: state.relation,
+          relationLabel,
+          nextchance: state.nextchance,
+          nextchanceLabel,
+          time: raw.time,
+          cost: raw.cost,
+          condition: raw.condition,
+          outcome,
+          confidence
+        })
+      });
+      if (!res.ok) throw new Error('bad status ' + res.status);
+      const data = await res.json();
+      if (!data.normal || !data.polite || !data.casual) throw new Error('incomplete response');
+      if (requestId !== messageRequestId) return; // 그 사이 다른 판단으로 넘어감
+      generatedMessages = data;
+      setTone(state.tone);
+    } catch (err) {
+      // API 미배포(로컬) 또는 실패 시 룰베이스 문구로 조용히 폴백
+      if (requestId !== messageRequestId) return;
+      generatedMessages = null;
+      setTone(state.tone);
+    }
+  }
+
+  function currentMessage(tone) {
+    if (generatedMessages && generatedMessages[tone]) return generatedMessages[tone];
+    return fallbackMessage(tone, state.recipientName);
+  }
+
+  function setTone(tone) {
+    state.tone = tone;
+    document.querySelectorAll('.tone-chip').forEach(c => {
+      c.classList.toggle('selected', c.dataset.tone === tone);
+    });
+    document.getElementById('message-box').textContent = currentMessage(tone);
+    document.getElementById('copy-btn').textContent = '이 문구 복사하기';
+    document.getElementById('copy-btn').classList.remove('copied');
+  }
+
+  function copyMessage() {
+    const text = currentMessage(state.tone);
+    const btn = document.getElementById('copy-btn');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+    btn.textContent = '복사했어요';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '이 문구 복사하기'; btn.classList.remove('copied'); }, 1800);
+  }
+
+  function giveFeedback(kind) {
+    document.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('picked'));
+    event.currentTarget.classList.add('picked');
+    document.getElementById('feedback-row').style.display = 'none';
+    document.getElementById('fb-thanks').style.display = 'block';
+  }
+
+  function resetFlow() {
+    showStep('step-input');
+  }
+</script>
+
+</body>
+</html>
