@@ -8,10 +8,16 @@
 //   SUPABASE_ANON_KEY     - Supabase Project Settings > API > anon public key
 //   GA_MEASUREMENT_ID     - GA4 속성의 측정 ID (G-XXXXXXXXXX)
 
+// SUPABASE_URL에 실수로 "/rest/v1" 같은 REST 경로나 끝 슬래시가 포함되면
+// supabase-js가 여기에 /rest/v1을 또 붙여 404가 난다. 프로젝트 base URL만 남도록 정리한다.
+function normalizeSupabaseUrl(url) {
+  return (url || '').trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'public, max-age=300');
   res.status(200).json({
-    supabaseUrl: process.env.SUPABASE_URL || '',
+    supabaseUrl: normalizeSupabaseUrl(process.env.SUPABASE_URL),
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
     gaMeasurementId: process.env.GA_MEASUREMENT_ID || ''
   });
