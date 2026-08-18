@@ -399,8 +399,8 @@
 
         <p class="feedback-label">이번 판단, 도움이 됐나요?</p>
         <div class="feedback-row" id="feedback-row">
-          <button class="fb-btn" onclick="giveFeedback('good')">네, 도움됐어요</button>
-          <button class="fb-btn" onclick="giveFeedback('bad')">아쉬워요</button>
+          <button class="fb-btn" onclick="giveFeedback('good', this)">네, 도움됐어요</button>
+          <button class="fb-btn" onclick="giveFeedback('bad', this)">아쉬워요</button>
         </div>
         <p class="fb-thanks" id="fb-thanks">마음 전달받았어요, 고마워요.</p>
 
@@ -725,9 +725,9 @@
     logEvent('copy_message', { tone: state.tone }, currentJudgmentId, { tone: state.tone });
   }
 
-  function giveFeedback(kind) {
+  function giveFeedback(kind, btn) {
     document.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('picked'));
-    event.currentTarget.classList.add('picked');
+    btn.classList.add('picked');
     document.getElementById('feedback-row').style.display = 'none';
     document.getElementById('fb-thanks').style.display = 'block';
     logEvent('feedback_click', { rating: kind }, currentJudgmentId, { rating: kind });
