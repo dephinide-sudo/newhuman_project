@@ -684,14 +684,18 @@
           confidence
         })
       });
-      if (!res.ok) throw new Error('bad status ' + res.status);
+      if (!res.ok) {
+        const bodyText = await res.text().catch(() => '');
+        throw new Error('bad status ' + res.status + ' - ' + bodyText);
+      }
       const data = await res.json();
-      if (!data.normal || !data.polite || !data.casual) throw new Error('incomplete response');
+      if (!data.normal || !data.polite || !data.casual) throw new Error('incomplete response: ' + JSON.stringify(data));
       if (requestId !== messageRequestId) return; // 그 사이 다른 판단으로 넘어감
       generatedMessages = data;
       setTone(state.tone);
     } catch (err) {
-      // API 미배포(로컬) 또는 실패 시 룰베이스 문구로 조용히 폴백
+      // API 미배포(로컬) 또는 실패 시 룰베이스 문구로 조용히 폴백하되, 원인은 콘솔에 남긴다.
+      console.error('generate-message 실패, 폴백 문구로 대체합니다:', err);
       if (requestId !== messageRequestId) return;
       generatedMessages = null;
       setTone(state.tone);
