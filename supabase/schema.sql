@@ -1,4 +1,8 @@
 -- Supabase SQL Editor에 그대로 붙여넣어 실행하세요.
+-- 기존 테이블/데이터를 지우고 완전히 새로 만든다 (재실행해도 안전하도록 idempotent).
+drop table if exists funnel_events;
+drop table if exists judgments;
+
 -- 판단이 완료된 순간(result_view)의 입력값+결과값 원본
 create table judgments (
   id uuid primary key default gen_random_uuid(),
