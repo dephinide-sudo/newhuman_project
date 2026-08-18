@@ -423,13 +423,15 @@
   function gtag() { dataLayer.push(arguments); }
   gtag('js', new Date());
 
-  let supabase = null;
+  // 변수명을 supabase로 두면 CDN 번들이 전역에 선언하는 `var supabase`와 충돌해
+  // SyntaxError(재선언)로 스크립트 전체가 깨지므로 supabaseClient로 분리한다.
+  let supabaseClient = null;
   fetch('/api/config')
     .then(r => r.json())
     .then(cfg => {
       if (cfg.gaMeasurementId) gtag('config', cfg.gaMeasurementId);
       if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
-        supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+        supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
       }
     })
     .catch(err => console.error('config load failed (아직 배포 전이거나 /api/config 미설정)', err));
@@ -441,8 +443,8 @@
   // gaParams/eventDetail에는 절대 recipient_name 같은 원문 개인정보를 넣지 않는다.
   function logEvent(eventType, gaParams, judgmentId, eventDetail) {
     gtag('event', eventType, gaParams || {});
-    if (!supabase) return; // Supabase 미설정 시(로컬 개발 등) 조용히 스킵
-    supabase.from('funnel_events').insert({
+    if (!supabaseClient) return; // Supabase 미설정 시(로컬 개발 등) 조용히 스킵
+    supabaseClient.from('funnel_events').insert({
       session_id: sessionId,
       event_type: eventType,
       judgment_id: judgmentId || null,
@@ -604,9 +606,9 @@
     document.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('picked'));
 
     currentJudgmentId = null;
-    if (supabase) {
+    if (supabaseClient) {
       const score = outcome === 'decline' ? confidence : 100 - confidence;
-      supabase.from('judgments').insert({
+      supabaseClient.from('judgments').insert({
         session_id: sessionId,
         relation: state.relation,
         nextchance: state.nextchance,
