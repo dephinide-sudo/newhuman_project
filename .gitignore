@@ -1,0 +1,24 @@
+# Claude Code local session/config — not project source
+.claude/
+
+# Unused local font files (Hahmlet is loaded via Google Fonts CDN in index.html)
+Hahmlet-Light.ttf
+Hahmlet-Medium.ttf
+Hahmlet-Regular.ttf
+Hahmlet-Thin.ttf
+
+# Personal working screenshots — already embedded in the slide deck artifact
+화면 캡처*.png
+
+# Node / Vercel
+node_modules/
+.vercel/
+
+# Env files
+.env
+.env.local
+.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
