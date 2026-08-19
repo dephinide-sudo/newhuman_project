@@ -436,7 +436,10 @@
   // 변수명을 supabase로 두면 CDN 번들이 전역에 선언하는 `var supabase`와 충돌해
   // SyntaxError(재선언)로 스크립트 전체가 깨지므로 supabaseClient로 분리한다.
   let supabaseClient = null;
-  fetch('/api/config')
+  // /api/config는 Vercel 서버리스 함수라 콜드 스타트 시 응답이 늦을 수 있다.
+  // logEvent가 이 Promise를 기다리지 않으면, 페이지 로드 직후 빠르게 발생하는 이벤트(예: 첫 버튼 클릭)는
+  // gtag('config')/supabaseClient 초기화가 끝나기 전에 실행돼 조용히 유실된다.
+  const configReady = fetch('/api/config')
     .then(r => r.json())
     .then(cfg => {
       if (cfg.gaMeasurementId) gtag('config', cfg.gaMeasurementId);
@@ -452,14 +455,16 @@
   // GA 이벤트 전송 + Supabase funnel_events 적재를 한 번에 처리한다.
   // gaParams/eventDetail에는 절대 recipient_name 같은 원문 개인정보를 넣지 않는다.
   function logEvent(eventType, gaParams, judgmentId, eventDetail) {
-    gtag('event', eventType, gaParams || {});
-    if (!supabaseClient) return; // Supabase 미설정 시(로컬 개발 등) 조용히 스킵
-    supabaseClient.from('funnel_events').insert({
-      session_id: sessionId,
-      event_type: eventType,
-      judgment_id: judgmentId || null,
-      event_detail: eventDetail || null
-    }).then(({ error }) => { if (error) console.error('funnel_events insert failed', error); });
+    configReady.then(() => {
+      gtag('event', eventType, gaParams || {});
+      if (!supabaseClient) return; // Supabase 미설정 시(로컬 개발 등) 조용히 스킵
+      supabaseClient.from('funnel_events').insert({
+        session_id: sessionId,
+        event_type: eventType,
+        judgment_id: judgmentId || null,
+        event_detail: eventDetail || null
+      }).then(({ error }) => { if (error) console.error('funnel_events insert failed', error); });
+    });
   }
 
   let state = { relation: 'ambiguous', nextchance: 'no', tone: 'normal' };
